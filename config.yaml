@@ -16,6 +16,9 @@ journals:
     - name: "IEEE Solid-State Circuits Letters"
       short: "JSSC-L"
       issn: "2573-9603"
+    - name: "IEEE Transactions on Biomedical Circuits and Systems"
+      short: "TBioCAS"
+      issn: "1932-4545"
   nature:
     - name: "Nature Sensors"
       short: "Nature Sensors"

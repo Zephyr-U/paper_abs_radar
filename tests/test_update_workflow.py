@@ -147,6 +147,23 @@ class UpdateWorkflowTests(unittest.TestCase):
         self.assertIn("AI / in-sensor / neuromorphic computing: 1", summary)
         self.assertIn("### Implantable / bioelectronic / neural", summary)
 
+    def test_tbicas_summary_uses_biomedical_circuit_focused_buckets(self):
+        papers = [
+            paper("A Wireless Neural Implant SoC"),
+            paper("A Wearable Multimodal Biosignal Acquisition ASIC"),
+            paper("A Low-Power ECG PPG AFE"),
+            paper("An Edge-AI Processor for Biomedical Signals"),
+        ]
+
+        summary = generate_issue_summary_draft(papers, profile="tbicas")
+
+        self.assertIn("## Focused Topic Distribution", summary)
+        self.assertIn("Implantable / neural interface: 1", summary)
+        self.assertIn("Wearable / biosignal acquisition: 2", summary)
+        self.assertIn("Biomedical AFE / sensor interface: 2", summary)
+        self.assertIn("Edge AI / biomedical signal processing: 1", summary)
+        self.assertIn("### Implantable / neural interface", summary)
+
     def test_update_below_threshold_does_not_change_baseline(self):
         existing = [paper("Old ADC", "10.1109/old")]
         current = existing + [paper(f"New Paper {idx}", f"10.1109/new{idx}") for idx in range(20)]

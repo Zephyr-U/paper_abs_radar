@@ -225,6 +225,40 @@ Self-powered / wireless / battery-free
 AI / in-sensor / neuromorphic computing
 ```
 
+## TBioCAS Article-Count Update Workflow
+
+`IEEE Transactions on Biomedical Circuits and Systems` (`TBioCAS`) uses the same article-count rolling update style as JSSC-L:
+
+```text
+lookback-days: 90
+update-threshold: 9
+```
+
+This means a draft is written after at least 10 unprocessed TBioCAS articles accumulate.
+
+Seed or reset the TBioCAS baseline:
+
+```bash
+python -m src.main --config config.yaml --mode seed-window --journal TBioCAS
+python -m src.main --config config.yaml --mode enrich-state-abstracts --journal TBioCAS
+```
+
+Run the rolling article-count update:
+
+```bash
+python -m src.main --config config.yaml --mode check-update --journal TBioCAS
+```
+
+TBioCAS drafts use focused buckets tailored to biomedical circuits and systems:
+
+```text
+Implantable / neural interface
+Wearable / biosignal acquisition
+Biomedical AFE / sensor interface
+Edge AI / biomedical signal processing
+Wireless / power / closed-loop systems
+```
+
 ## Testing
 
 The tests use the Python standard library runner and do not require live network access or API keys.

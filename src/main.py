@@ -223,7 +223,7 @@ def update_settings_for_journal_short(
     explicit_lookback_days: int | None,
     explicit_update_threshold: int | None,
 ) -> tuple[int, int]:
-    if journal_short.upper() in {"JSSC-L", "NATURE SENSORS"}:
+    if journal_short.upper() in {"JSSC-L", "TBIOCAS", "NATURE SENSORS"}:
         default_lookback_days = 90
         default_update_threshold = 9
     else:
@@ -238,6 +238,8 @@ def update_settings_for_journal_short(
 def summary_profile_for_journal_short(journal_short: str) -> str:
     if journal_short.upper() == "NATURE SENSORS":
         return "nature_sensors"
+    if journal_short.upper() == "TBIOCAS":
+        return "tbicas"
     return "circuits"
 
 

@@ -119,6 +119,8 @@ def save_papers_json(path: Path, papers: list[Paper]) -> None:
 def generate_issue_summary_draft(papers: list[Paper], profile: str = "circuits") -> str:
     if profile == "nature_sensors":
         return _generate_nature_sensors_summary_draft(papers)
+    if profile == "tbicas":
+        return _generate_tbicas_summary_draft(papers)
     if profile != "circuits":
         raise ValueError(f"Unsupported summary profile: {profile}")
     circuit_buckets = {
@@ -230,6 +232,95 @@ def _generate_nature_sensors_summary_draft(papers: list[Paper]) -> str:
             "analogue",
             "analog sensing-as-computation",
             "edge",
+        ],
+    }
+    focused_counts, _focused_examples = _bucket_papers_by_title_and_abstract(papers, focused_buckets)
+    lines = [
+        "# Issue Summary Draft",
+        "",
+        f"New articles: {len(papers)}",
+        "",
+        "Counts are title/abstract-keyword based and non-exclusive; abstracts are used for focused summary drafting.",
+        "",
+    ]
+    _append_distribution(lines, "Focused Topic Distribution", focused_counts)
+    _append_focused_summary_candidates(
+        lines,
+        papers,
+        focused_buckets,
+        focused_bucket_names=list(focused_buckets),
+        match_abstract=True,
+    )
+    return "\n".join(lines).strip() + "\n"
+
+
+def _generate_tbicas_summary_draft(papers: list[Paper]) -> str:
+    focused_buckets = {
+        "Implantable / neural interface": [
+            "implant",
+            "implantable",
+            "neural",
+            "brain",
+            "eeg",
+            "ecog",
+            "bci",
+            "neuro",
+            "stimulation",
+            "prosthesis",
+            "intracranial",
+        ],
+        "Wearable / biosignal acquisition": [
+            "wearable",
+            "biosignal",
+            "ecg",
+            "emg",
+            "eeg",
+            "ppg",
+            "epilepsy",
+            "seizure",
+            "body",
+            "motion",
+            "health",
+            "multimodal",
+        ],
+        "Biomedical AFE / sensor interface": [
+            "afe",
+            "front-end",
+            "readout",
+            "sensor interface",
+            "acquisition",
+            "bioimpedance",
+            "impedance",
+            "amplifier",
+            "adc",
+            "analog",
+            "mixed-signal",
+        ],
+        "Edge AI / biomedical signal processing": [
+            "edge-ai",
+            "edge ai",
+            "machine learning",
+            "deep learning",
+            "neural network",
+            "spiking",
+            "processor",
+            "accelerator",
+            "classification",
+            "detection",
+            "signal processing",
+            "on-device",
+        ],
+        "Wireless / power / closed-loop systems": [
+            "wireless",
+            "power",
+            "energy",
+            "battery",
+            "harvesting",
+            "telemetry",
+            "closed-loop",
+            "closed loop",
+            "stimulator",
+            "stimulation",
         ],
     }
     focused_counts, _focused_examples = _bucket_papers_by_title_and_abstract(papers, focused_buckets)

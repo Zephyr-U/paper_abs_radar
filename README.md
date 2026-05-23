@@ -73,7 +73,7 @@ output/state/JSSC_papers.json
 Run this weekly or manually. It checks the last 30 days and only writes a draft when the number of new papers is greater than the update threshold, default `20`.
 
 ```bash
-python -m src.main --config config.yaml --mode check-update --journal JSSC --obsidian-dir "/Users/zephyr.u/Library/Mobile Documents/iCloud~md~obsidian/Documents/ASIC/Paper Fetch"
+python -m src.main --config config.yaml --mode check-update --journal JSSC --obsidian-dir "/path/to/Obsidian/ASIC/Paper Fetch"
 ```
 
 When triggered, the CLI:
@@ -92,7 +92,7 @@ output/summaries/YYYY-MM-DD_JSSC_issue_summary_draft.md
 The CLI does not write the polished Obsidian summary automatically. Codex should read the draft and state JSON, then manually write the final note to:
 
 ```text
-/Users/zephyr.u/Library/Mobile Documents/iCloud~md~obsidian/Documents/ASIC/Paper Fetch/YYYY-MM-DD_JSSC_issue_summary.md
+/path/to/Obsidian/ASIC/Paper Fetch/YYYY-MM-DD_JSSC_issue_summary.md
 ```
 
 ### Summary rules

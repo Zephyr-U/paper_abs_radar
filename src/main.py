@@ -10,6 +10,7 @@ from src.abstracts import enrich_missing_abstracts
 from src.config import load_config
 from src.date_windows import build_run_label, compact_date_label, resolve_date_window
 from src.enrich import deduplicate_and_merge, enrich_papers
+from src.env import load_env_file
 from src.export import export_outputs
 from src.sources.crossref import search_crossref_by_issn
 from src.sources.openalex import search_openalex_by_issn
@@ -45,6 +46,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    load_env_file()
     args = build_parser().parse_args(argv)
     logging.basicConfig(level=getattr(logging, args.log_level.upper(), logging.INFO), format="%(levelname)s: %(message)s")
     config = load_config(args.config)

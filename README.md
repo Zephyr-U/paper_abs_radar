@@ -47,7 +47,7 @@ python -m src.main --config config.yaml --no-springer
 For the minimal JSSC-only workflow, use `--no-enrich` first. It fetches all OpenAlex pages for the configured JSSC ISSN and skips slower enrichment APIs.
 Add `--enrich-abstracts` when you want to fill missing abstracts through OpenAlex DOI lookup first, then Crossref and Semantic Scholar. The cache defaults to `output/cache/abstracts.json`.
 Use `--mode enrich-state-abstracts` to fill abstracts in an existing monthly/update baseline JSON under `output/state/`.
-`check-update` writes a machine draft named `YYYY-MM-DD_JSSC_issue_summary_draft.md`; Codex should use that draft and the state JSON to write the final polished Obsidian note manually.
+`check-update` writes a machine draft named `YYMMDD_JSSC_issue_summary_draft.md`; Codex should use that draft and the state JSON to write the final polished Obsidian note manually.
 
 ## JSSC Monthly Update Workflow
 
@@ -84,7 +84,7 @@ When triggered, the CLI:
 4. Writes a machine draft:
 
 ```text
-output/summaries/YYYY-MM-DD_JSSC_issue_summary_draft.md
+output/summaries/YYMMDD_JSSC_issue_summary_draft.md
 ```
 
 5. Updates the local baseline state.
@@ -92,7 +92,7 @@ output/summaries/YYYY-MM-DD_JSSC_issue_summary_draft.md
 The CLI does not write the polished Obsidian summary automatically. Codex should read the draft and state JSON, then manually write the final note to:
 
 ```text
-/path/to/Obsidian/ASIC/Paper Fetch/YYYY-MM-DD_JSSC_issue_summary.md
+/path/to/Obsidian/ASIC/Paper Fetch/YYMMDD_JSSC_issue_summary.md
 ```
 
 ### Summary rules
@@ -125,7 +125,7 @@ Focused summaries should cover:
 - Run `check-update --journal JSSC`.
 - Confirm whether new papers are greater than `20`.
 - If a draft is created, confirm abstract coverage in the log.
-- Open `output/summaries/YYYY-MM-DD_JSSC_issue_summary_draft.md`.
+- Open `output/summaries/YYMMDD_JSSC_issue_summary_draft.md`.
 - Use Codex to polish focused summaries into Chinese `問題 / 方法 / 效果` format.
 - Save the final note under the Obsidian root folder `Paper Fetch`.
 - Confirm `output/state/JSSC_papers.json` has been updated.
@@ -139,9 +139,9 @@ title, authors, venue, venue_short, year, publication_date, doi, url, abstract
 Outputs are written as:
 
 ```text
-output/YYYY-MM-DD_MODE_FROM_to_TO_papers.csv
-output/YYYY-MM-DD_MODE_FROM_to_TO_papers.json
-output/YYYY-MM-DD_MODE_FROM_to_TO_paper_metadata.md
+output/YYMMDD_MODE_FROM_to_TO_papers.csv
+output/YYMMDD_MODE_FROM_to_TO_papers.json
+output/YYMMDD_MODE_FROM_to_TO_paper_metadata.md
 ```
 
 ## Testing

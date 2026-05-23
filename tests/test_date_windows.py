@@ -1,7 +1,7 @@
 import unittest
 from datetime import date
 
-from src.date_windows import build_run_label, resolve_date_window
+from src.date_windows import build_run_label, compact_date_label, resolve_date_window
 
 
 class DateWindowTests(unittest.TestCase):
@@ -22,5 +22,8 @@ class DateWindowTests(unittest.TestCase):
     def test_build_run_label_includes_mode_and_range(self):
         self.assertEqual(
             build_run_label("backfill", "2021-05-23", "2026-05-23"),
-            "2026-05-23_backfill_2021-05-23_to_2026-05-23",
+            "260523_backfill_2021-05-23_to_2026-05-23",
         )
+
+    def test_compact_date_label_converts_iso_date_to_yymmdd(self):
+        self.assertEqual(compact_date_label("2026-05-23"), "260523")

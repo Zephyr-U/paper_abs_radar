@@ -14,7 +14,11 @@ def resolve_date_window(
 
 
 def build_run_label(mode: str, from_date: str, to_date: str) -> str:
-    return f"{to_date}_{mode}_{from_date}_to_{to_date}"
+    return f"{compact_date_label(to_date)}_{mode}_{from_date}_to_{to_date}"
+
+
+def compact_date_label(value: str) -> str:
+    return date.fromisoformat(value).strftime("%y%m%d")
 
 
 def _replace_year_safely(value: date, year: int) -> date:

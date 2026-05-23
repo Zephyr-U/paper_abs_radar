@@ -8,7 +8,7 @@ from pathlib import Path
 
 from src.abstracts import enrich_missing_abstracts
 from src.config import load_config
-from src.date_windows import build_run_label, resolve_date_window
+from src.date_windows import build_run_label, compact_date_label, resolve_date_window
 from src.enrich import deduplicate_and_merge, enrich_papers
 from src.export import export_outputs
 from src.sources.crossref import search_crossref_by_issn
@@ -74,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
             logging.info("Checking %s Crossref updates from %s to %s", journal.short, from_date, to_date)
             current = deduplicate_and_merge(search_crossref_by_issn(journal.issn, from_date, to_date))
             state_path = Path(args.state_dir) / f"{journal.short}_papers.json"
-            summary_path = Path(args.summary_dir) / f"{to_date}_{journal.short}_issue_summary_draft.md"
+            summary_path = Path(args.summary_dir) / f"{compact_date_label(to_date)}_{journal.short}_issue_summary_draft.md"
             result = apply_update_if_threshold_met(
                 state_path,
                 summary_path,

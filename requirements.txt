@@ -1,0 +1,7 @@
+requests
+pyyaml
+pandas
+python-dateutil
+beautifulsoup4
+tqdm
+rich

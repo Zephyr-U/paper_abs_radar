@@ -1,0 +1,41 @@
+date_range:
+  from: "2026-01-01"
+  to: "2026-05-23"
+
+output:
+  dir: "output"
+  markdown_filename: "paper_metadata.md"
+  csv_filename: "papers.csv"
+  json_filename: "papers.json"
+
+journals:
+  ieee:
+    - name: "IEEE Journal of Solid-State Circuits"
+      short: "JSSC"
+      issn: "0018-9200"
+
+keywords:
+  positive:
+    - implantable
+    - biomedical
+    - bioelectronics
+    - RF
+    - wireless power
+    - backscatter
+    - telemetry
+    - SoC
+    - ASIC
+    - analog front-end
+    - ultrasound
+    - temperature sensor
+    - voltage reference
+    - bandgap
+    - rectifier
+    - wake-up receiver
+    - neural
+    - antenna
+  negative:
+    - machine learning only
+    - review
+    - editorial
+    - correction

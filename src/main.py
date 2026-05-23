@@ -123,6 +123,7 @@ def main(argv: list[str] | None = None) -> int:
                 threshold=update_threshold,
                 cache_path=Path(args.abstract_cache),
                 allow_title_search=args.allow_title_search,
+                summary_profile=summary_profile_for_journal_short(journal.short),
             )
             logging.info("New papers for %s: %s", journal.short, result.new_count)
             if result.summary_written:
@@ -220,7 +221,7 @@ def update_settings_for_journal_short(
     explicit_lookback_days: int | None,
     explicit_update_threshold: int | None,
 ) -> tuple[int, int]:
-    if journal_short.upper() == "JSSC-L":
+    if journal_short.upper() in {"JSSC-L", "NATURE SENSORS"}:
         default_lookback_days = 90
         default_update_threshold = 9
     else:
@@ -230,6 +231,12 @@ def update_settings_for_journal_short(
         explicit_lookback_days if explicit_lookback_days is not None else default_lookback_days,
         explicit_update_threshold if explicit_update_threshold is not None else default_update_threshold,
     )
+
+
+def summary_profile_for_journal_short(journal_short: str) -> str:
+    if journal_short.upper() == "NATURE SENSORS":
+        return "nature_sensors"
+    return "circuits"
 
 
 def seed_window_bounds_for_journal_short(

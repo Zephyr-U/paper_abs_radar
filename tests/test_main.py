@@ -14,6 +14,9 @@ class MainTests(unittest.TestCase):
     def test_jssc_l_uses_article_count_update_defaults(self):
         self.assertEqual(update_settings_for_journal_short("JSSC-L", None, None), (90, 9))
 
+    def test_nature_sensors_uses_article_count_update_defaults(self):
+        self.assertEqual(update_settings_for_journal_short("Nature Sensors", None, None), (90, 9))
+
     def test_jssc_uses_issue_update_defaults(self):
         self.assertEqual(update_settings_for_journal_short("JSSC", None, None), (30, 20))
 
@@ -23,6 +26,12 @@ class MainTests(unittest.TestCase):
     def test_jssc_l_seed_window_defaults_to_article_count_lookback(self):
         self.assertEqual(
             seed_window_bounds_for_journal_short("JSSC-L", date(2026, 5, 23), None, None, None),
+            ("2026-02-22", "2026-05-23"),
+        )
+
+    def test_nature_sensors_seed_window_defaults_to_article_count_lookback(self):
+        self.assertEqual(
+            seed_window_bounds_for_journal_short("Nature Sensors", date(2026, 5, 23), None, None, None),
             ("2026-02-22", "2026-05-23"),
         )
 

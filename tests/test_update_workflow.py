@@ -130,6 +130,23 @@ class UpdateWorkflowTests(unittest.TestCase):
         self.assertIn("### Additional sample", summary)
         self.assertNotIn("Random sample", summary)
 
+    def test_nature_sensors_summary_uses_wearable_ml_focused_buckets(self):
+        papers = [
+            paper("Wireless and Battery-Free Implantable Sensing Technologies"),
+            paper("Wearable Skin Sensor for Sweat Monitoring"),
+            paper("Self-Powered Wireless Sensor Patch"),
+            paper("In-Sensor Neuromorphic Computing for Edge AI"),
+        ]
+
+        summary = generate_issue_summary_draft(papers, profile="nature_sensors")
+
+        self.assertIn("## Focused Topic Distribution", summary)
+        self.assertIn("Implantable / bioelectronic / neural: 1", summary)
+        self.assertIn("Wearable / epidermal / sweat / skin: 1", summary)
+        self.assertIn("Self-powered / wireless / battery-free: 2", summary)
+        self.assertIn("AI / in-sensor / neuromorphic computing: 1", summary)
+        self.assertIn("### Implantable / bioelectronic / neural", summary)
+
     def test_update_below_threshold_does_not_change_baseline(self):
         existing = [paper("Old ADC", "10.1109/old")]
         current = existing + [paper(f"New Paper {idx}", f"10.1109/new{idx}") for idx in range(20)]

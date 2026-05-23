@@ -8,7 +8,7 @@ from src.models import Paper
 from src.utils import clean_text, get_json
 
 LOGGER = logging.getLogger(__name__)
-SPRINGER_URL = "https://api.springernature.com/metadata/v1/articles"
+SPRINGER_URL = "https://api.springernature.com/meta/v2/json"
 
 
 def springer_enrich_by_doi(doi: str) -> Optional[Paper]:
@@ -33,12 +33,12 @@ def _paper_from_record(record: dict[str, Any]) -> Paper:
     return Paper(
         title=clean_text(record.get("title")) or "",
         authors=authors,
-        venue=record.get("publicationName") or "",
-        venue_short=record.get("publicationName") or "",
+        venue=record.get("journalTitle") or record.get("publicationName") or "",
+        venue_short=record.get("journalTitle") or record.get("publicationName") or "",
         year=_year_from_date(record.get("publicationDate")),
         publication_date=record.get("publicationDate"),
         doi=record.get("doi"),
-        url=record.get("url") or record.get("webUrl"),
+        url=_url_from_record(record),
         abstract=clean_text(record.get("abstract")),
         source_priority=["Springer"],
     )
@@ -51,3 +51,16 @@ def _year_from_date(value: Optional[str]) -> Optional[int]:
         return int(value[:4])
     except ValueError:
         return None
+
+
+def _url_from_record(record: dict[str, Any]) -> Optional[str]:
+    url = record.get("url")
+    if isinstance(url, str):
+        return url
+    if isinstance(url, list) and url:
+        first_url = url[0]
+        if isinstance(first_url, dict):
+            return first_url.get("value")
+        if isinstance(first_url, str):
+            return first_url
+    return record.get("webUrl")

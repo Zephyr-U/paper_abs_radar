@@ -53,6 +53,7 @@ def apply_update_if_threshold_met(
     threshold: int = 20,
     cache_path: Path | None = None,
     allow_title_search: bool = False,
+    summary_profile: str = "circuits",
 ) -> UpdateResult:
     existing = load_papers_json(state_path)
     new_papers = diff_new_papers(existing, current)
@@ -67,7 +68,7 @@ def apply_update_if_threshold_met(
     )
     with_abstract_after = sum(1 for paper in new_papers if paper.abstract)
     summary_path.parent.mkdir(parents=True, exist_ok=True)
-    summary_path.write_text(generate_issue_summary_draft(new_papers), encoding="utf-8")
+    summary_path.write_text(generate_issue_summary_draft(new_papers, profile=summary_profile), encoding="utf-8")
     merged = existing + new_papers
     save_papers_json(state_path, merged)
     return UpdateResult(
@@ -115,7 +116,11 @@ def save_papers_json(path: Path, papers: list[Paper]) -> None:
         json.dump([_core_row(paper) for paper in papers], handle, indent=2, ensure_ascii=False)
 
 
-def generate_issue_summary_draft(papers: list[Paper]) -> str:
+def generate_issue_summary_draft(papers: list[Paper], profile: str = "circuits") -> str:
+    if profile == "nature_sensors":
+        return _generate_nature_sensors_summary_draft(papers)
+    if profile != "circuits":
+        raise ValueError(f"Unsupported summary profile: {profile}")
     circuit_buckets = {
         "Data converters": ["adc", "dac", "converter", "sar", "delta-sigma", "pipeline"],
         "AI / compute accelerators": ["accelerator", "compute", "memory", "cim", "imc", "ai", "llm", "processor"],
@@ -143,12 +148,108 @@ def generate_issue_summary_draft(papers: list[Paper]) -> str:
     ]
     _append_distribution(lines, "Circuit Topic Distribution", circuit_counts)
     _append_distribution(lines, "Application Distribution", application_counts)
-    _append_focused_summary_candidates(lines, papers, application_buckets)
+    _append_focused_summary_candidates(
+        lines,
+        papers,
+        application_buckets,
+        focused_bucket_names=[
+            "Implantable / neural / biomedical",
+            "Precision analog / references / sensors",
+            "Ultra-low-power / always-on / IoT",
+        ],
+    )
     return "\n".join(lines).strip() + "\n"
 
 
 def summarize_distribution(papers: list[Paper]) -> str:
     return generate_issue_summary_draft(papers)
+
+
+def _generate_nature_sensors_summary_draft(papers: list[Paper]) -> str:
+    focused_buckets = {
+        "Implantable / bioelectronic / neural": [
+            "implant",
+            "implantable",
+            "intracranial",
+            "neural",
+            "bioelectronic",
+            "biodegradable",
+            "microneedle",
+            "organ",
+            "piezo1",
+            "ecog",
+            "neurostimulation",
+            "in vivo",
+            "medical device",
+        ],
+        "Wearable / epidermal / sweat / skin": [
+            "wearable",
+            "skin",
+            "epidermal",
+            "sweat",
+            "tattoo",
+            "shoulder",
+            "on-body",
+            "clothing",
+            "gesture",
+            "haptic",
+            "mask",
+            "breath",
+            "cortisol",
+            "motion tracking",
+            "biopotential",
+            "biomechanical",
+            "electrodermal",
+        ],
+        "Self-powered / wireless / battery-free": [
+            "self-powered",
+            "wireless",
+            "battery-free",
+            "chip-less",
+            "passive",
+            "remote sensing",
+            "standoff",
+            "triboelectric",
+            "piezoelectric-powered",
+        ],
+        "AI / in-sensor / neuromorphic computing": [
+            "ai",
+            "deep learning",
+            "machine learning",
+            "agentic",
+            "neuromorphic",
+            "in-sensor",
+            "sensing-as-computation",
+            "computing",
+            "memristor",
+            "gan",
+            "perception",
+            "slam",
+            "intelligent",
+            "codesign",
+            "analogue",
+            "analog sensing-as-computation",
+            "edge",
+        ],
+    }
+    focused_counts, _focused_examples = _bucket_papers_by_title_and_abstract(papers, focused_buckets)
+    lines = [
+        "# Issue Summary Draft",
+        "",
+        f"New articles: {len(papers)}",
+        "",
+        "Counts are title/abstract-keyword based and non-exclusive; abstracts are used for focused summary drafting.",
+        "",
+    ]
+    _append_distribution(lines, "Focused Topic Distribution", focused_counts)
+    _append_focused_summary_candidates(
+        lines,
+        papers,
+        focused_buckets,
+        focused_bucket_names=list(focused_buckets),
+        match_abstract=True,
+    )
+    return "\n".join(lines).strip() + "\n"
 
 
 def _bucket_papers(papers: list[Paper], buckets: dict[str, list[str]]) -> tuple[dict[str, int], dict[str, list[str]]]:
@@ -172,21 +273,42 @@ def _bucket_papers(papers: list[Paper], buckets: dict[str, list[str]]) -> tuple[
     return counts, examples
 
 
+def _bucket_papers_by_title_and_abstract(
+    papers: list[Paper],
+    buckets: dict[str, list[str]],
+) -> tuple[dict[str, int], dict[str, list[str]]]:
+    counts = {name: 0 for name in buckets}
+    examples = {name: [] for name in buckets}
+    for paper in papers:
+        text = f"{paper.title} {paper.abstract or ''}".lower()
+        matched = False
+        for name, keywords in buckets.items():
+            if any(keyword in text for keyword in keywords):
+                counts[name] += 1
+                if len(examples[name]) < 3:
+                    examples[name].append(paper.title)
+                matched = True
+        if not matched:
+            counts.setdefault("Other", 0)
+            examples.setdefault("Other", [])
+            counts["Other"] += 1
+            if len(examples["Other"]) < 3:
+                examples["Other"].append(paper.title)
+    return counts, examples
+
+
 def _append_focused_summary_candidates(
     lines: list[str],
     papers: list[Paper],
     application_buckets: dict[str, list[str]],
+    focused_bucket_names: list[str],
+    match_abstract: bool = False,
 ) -> None:
-    focused_bucket_names = [
-        "Implantable / neural / biomedical",
-        "Precision analog / references / sensors",
-        "Ultra-low-power / always-on / IoT",
-    ]
     focused_entries: list[tuple[str, Paper]] = []
     focused_ids: set[int] = set()
     for bucket_name in focused_bucket_names:
         keywords = application_buckets[bucket_name]
-        bucket_papers = [paper for paper in papers if _matches_title(paper, keywords)]
+        bucket_papers = [paper for paper in papers if _matches_keywords(paper, keywords, include_abstract=match_abstract)]
         if bucket_papers:
             focused_entries.extend((bucket_name, paper) for paper in bucket_papers)
             focused_ids.update(id(paper) for paper in bucket_papers)
@@ -213,6 +335,13 @@ def _append_focused_summary_candidates(
 
 def _matches_title(paper: Paper, keywords: list[str]) -> bool:
     text = paper.title.lower()
+    return any(keyword in text for keyword in keywords)
+
+
+def _matches_keywords(paper: Paper, keywords: list[str], include_abstract: bool = False) -> bool:
+    text = paper.title.lower()
+    if include_abstract:
+        text = f"{text} {(paper.abstract or '').lower()}"
     return any(keyword in text for keyword in keywords)
 
 

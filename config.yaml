@@ -16,6 +16,10 @@ journals:
     - name: "IEEE Solid-State Circuits Letters"
       short: "JSSC-L"
       issn: "2573-9603"
+  nature:
+    - name: "Nature Sensors"
+      short: "Nature Sensors"
+      issn: "3059-4499"
 
 keywords:
   positive:

@@ -7,7 +7,7 @@ from typing import Iterable, Optional
 
 from src.enrich import normalize_doi
 from src.models import Paper
-from src.sources import crossref, openalex, semantic_scholar
+from src.sources import crossref, openalex, semantic_scholar, springer
 
 LOGGER = logging.getLogger(__name__)
 
@@ -50,6 +50,10 @@ def _fetch_abstract(paper: Paper, allow_title_search: bool = False) -> Optional[
         crossref_paper = crossref.get_by_doi(doi)
         if crossref_paper and crossref_paper.abstract:
             return crossref_paper.abstract
+        if _is_springer_nature_doi(doi):
+            springer_paper = springer.springer_enrich_by_doi(doi)
+            if springer_paper and springer_paper.abstract:
+                return springer_paper.abstract
         semantic_paper = semantic_scholar.get_by_doi(doi)
         if semantic_paper and semantic_paper.abstract:
             return semantic_paper.abstract
@@ -68,6 +72,10 @@ def _cache_key(paper: Paper) -> Optional[str]:
     if paper.title:
         return f"title:{paper.title.strip().lower()}"
     return None
+
+
+def _is_springer_nature_doi(doi: str) -> bool:
+    return doi.startswith("10.1038/")
 
 
 def _load_cache(cache_path: Optional[Path]) -> dict[str, Optional[str]]:

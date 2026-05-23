@@ -4,7 +4,7 @@ from src.config import load_config
 
 
 class ConfigTests(unittest.TestCase):
-    def test_default_config_includes_jssc_and_jssc_l(self):
+    def test_default_config_includes_jssc_jssc_l_and_nature_sensors(self):
         config = load_config("config.yaml")
         journals = {journal.short: journal for journal in config.journals}
 
@@ -12,3 +12,6 @@ class ConfigTests(unittest.TestCase):
         self.assertIn("JSSC-L", journals)
         self.assertEqual(journals["JSSC-L"].name, "IEEE Solid-State Circuits Letters")
         self.assertEqual(journals["JSSC-L"].issn, "2573-9603")
+        self.assertIn("Nature Sensors", journals)
+        self.assertEqual(journals["Nature Sensors"].name, "Nature Sensors")
+        self.assertEqual(journals["Nature Sensors"].issn, "3059-4499")

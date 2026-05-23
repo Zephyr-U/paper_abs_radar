@@ -186,6 +186,45 @@ The polished Obsidian note should use:
 YYMMDD_JSSC-L_issue_summary.md
 ```
 
+## Nature Sensors Article-Count Update Workflow
+
+`Nature Sensors` uses the same article-count rolling update style as JSSC-L:
+
+```text
+lookback-days: 90
+update-threshold: 9
+```
+
+This means a draft is written after at least 10 unprocessed Nature Sensors articles accumulate.
+
+Nature-family DOI abstract enrichment uses Springer Nature Meta API v2. Set the Meta API key locally before running enrichment:
+
+```bash
+export SPRINGER_API_KEY="your_meta_api_key"
+```
+
+Seed or reset the Nature Sensors baseline:
+
+```bash
+python -m src.main --config config.yaml --mode seed-window --journal "Nature Sensors"
+python -m src.main --config config.yaml --mode enrich-state-abstracts --journal "Nature Sensors"
+```
+
+Run the rolling article-count update:
+
+```bash
+python -m src.main --config config.yaml --mode check-update --journal "Nature Sensors"
+```
+
+Nature Sensors drafts use focused buckets tailored to wearable sensing and PPG/ML-adjacent work:
+
+```text
+Implantable / bioelectronic / neural
+Wearable / epidermal / sweat / skin
+Self-powered / wireless / battery-free
+AI / in-sensor / neuromorphic computing
+```
+
 ## Testing
 
 The tests use the Python standard library runner and do not require live network access or API keys.

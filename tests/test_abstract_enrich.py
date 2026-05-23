@@ -70,6 +70,21 @@ class AbstractEnrichTests(unittest.TestCase):
 
         self.assertEqual(enriched[0].abstract, "Semantic Scholar abstract.")
 
+    def test_falls_back_to_springer_for_nature_doi_before_semantic_scholar(self):
+        openalex_paper = make_paper(abstract=None, source_priority=["OpenAlex"])
+        crossref_paper = make_paper(abstract=None, source_priority=["Crossref"])
+        springer_paper = make_paper(abstract="Springer abstract.", source_priority=["Springer"])
+
+        with patch("src.abstracts.openalex.get_by_doi", return_value=openalex_paper):
+            with patch("src.abstracts.crossref.get_by_doi", return_value=crossref_paper):
+                with patch("src.abstracts.springer.springer_enrich_by_doi", return_value=springer_paper) as springer_get:
+                    with patch("src.abstracts.semantic_scholar.get_by_doi") as semantic_get:
+                        enriched = enrich_missing_abstracts([make_paper(doi="10.1038/s44460-026-00076-6")])
+
+        self.assertEqual(enriched[0].abstract, "Springer abstract.")
+        springer_get.assert_called_once_with("10.1038/s44460-026-00076-6")
+        semantic_get.assert_not_called()
+
     def test_uses_cache_for_repeated_doi(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "abstract_cache.json"

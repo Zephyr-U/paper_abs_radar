@@ -13,6 +13,9 @@ journals:
     - name: "IEEE Journal of Solid-State Circuits"
       short: "JSSC"
       issn: "0018-9200"
+    - name: "IEEE Solid-State Circuits Letters"
+      short: "JSSC-L"
+      issn: "2573-9603"
 
 keywords:
   positive:

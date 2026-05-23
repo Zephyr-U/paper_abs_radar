@@ -21,14 +21,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
     parser.add_argument(
         "--mode",
-        choices=["backfill", "seed-month", "check-update", "enrich-state-abstracts"],
+        choices=["backfill", "seed-month", "seed-window", "check-update", "enrich-state-abstracts"],
         default="check-update",
         help="Run mode. backfill uses OpenAlex; seed-month/check-update use Crossref update state.",
     )
     parser.add_argument("--backfill-years", type=int, default=5, help="Years to fetch for --mode backfill")
     parser.add_argument("--issue-month", help="Issue month for seed-month, e.g. 2026-05")
-    parser.add_argument("--lookback-days", type=int, default=30, help="Days to inspect for check-update")
-    parser.add_argument("--update-threshold", type=int, default=20, help="Write summary and update state only above this new-paper count")
+    parser.add_argument("--from", dest="from_date", help="Start date for seed-window, e.g. 2026-03-01")
+    parser.add_argument("--to", dest="to_date", help="End date for seed-window, e.g. 2026-05-23")
+    parser.add_argument("--lookback-days", type=int, help="Days to inspect for check-update")
+    parser.add_argument("--update-threshold", type=int, help="Write summary and update state only above this new-paper count")
     parser.add_argument("--state-dir", default="output/state", help="Directory for local update baseline JSON")
     parser.add_argument("--summary-dir", default="output/summaries", help="Directory for generated issue summaries")
     parser.add_argument("--obsidian-dir", help="Optional Obsidian output directory for Codex-polished summaries")
@@ -60,7 +62,34 @@ def main(argv: list[str] | None = None) -> int:
         for journal in journals:
             from_date, to_date = _month_bounds(args.issue_month)
             logging.info("Seeding %s state from Crossref %s to %s", journal.short, from_date, to_date)
-            papers = search_crossref_by_issn(journal.issn, from_date, to_date)
+            papers = search_crossref_by_issn(
+                journal.issn,
+                from_date,
+                to_date,
+                date_field=crossref_date_field_for_journal_short(journal.short),
+            )
+            state_path = Path(args.state_dir) / f"{journal.short}_papers.json"
+            save_papers_json(state_path, deduplicate_and_merge(papers))
+            logging.info("Wrote %s (%s papers)", state_path, len(papers))
+        return 0
+
+    if args.mode == "seed-window":
+        today = date.today()
+        for journal in journals:
+            from_date, to_date = seed_window_bounds_for_journal_short(
+                journal.short,
+                today,
+                args.from_date,
+                args.to_date,
+                args.lookback_days,
+            )
+            logging.info("Seeding %s state from Crossref %s to %s", journal.short, from_date, to_date)
+            papers = search_crossref_by_issn(
+                journal.issn,
+                from_date,
+                to_date,
+                date_field=crossref_date_field_for_journal_short(journal.short),
+            )
             state_path = Path(args.state_dir) / f"{journal.short}_papers.json"
             save_papers_json(state_path, deduplicate_and_merge(papers))
             logging.info("Wrote %s (%s papers)", state_path, len(papers))
@@ -68,18 +97,30 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.mode == "check-update":
         today = date.today()
-        from_date = (today - timedelta(days=args.lookback_days)).isoformat()
-        to_date = today.isoformat()
         for journal in journals:
+            lookback_days, update_threshold = update_settings_for_journal_short(
+                journal.short,
+                args.lookback_days,
+                args.update_threshold,
+            )
+            from_date = (today - timedelta(days=lookback_days)).isoformat()
+            to_date = today.isoformat()
             logging.info("Checking %s Crossref updates from %s to %s", journal.short, from_date, to_date)
-            current = deduplicate_and_merge(search_crossref_by_issn(journal.issn, from_date, to_date))
+            current = deduplicate_and_merge(
+                search_crossref_by_issn(
+                    journal.issn,
+                    from_date,
+                    to_date,
+                    date_field=crossref_date_field_for_journal_short(journal.short),
+                )
+            )
             state_path = Path(args.state_dir) / f"{journal.short}_papers.json"
             summary_path = Path(args.summary_dir) / f"{compact_date_label(to_date)}_{journal.short}_issue_summary_draft.md"
             result = apply_update_if_threshold_met(
                 state_path,
                 summary_path,
                 current,
-                threshold=args.update_threshold,
+                threshold=update_threshold,
                 cache_path=Path(args.abstract_cache),
                 allow_title_search=args.allow_title_search,
             )
@@ -96,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
                 if args.obsidian_dir:
                     logging.info("Obsidian dir configured for Codex-polished summaries: %s", args.obsidian_dir)
             else:
-                logging.info("No state update because new paper count did not exceed %s", args.update_threshold)
+                logging.info("No state update because new paper count did not exceed %s", update_threshold)
         return 0
 
     if args.mode == "enrich-state-abstracts":
@@ -166,6 +207,48 @@ def _month_bounds(issue_month: str) -> tuple[str, str]:
     month = int(month_text)
     last_day = monthrange(year, month)[1]
     return f"{year:04d}-{month:02d}-01", f"{year:04d}-{month:02d}-{last_day:02d}"
+
+
+def crossref_date_field_for_journal_short(journal_short: str) -> str:
+    if journal_short.upper() == "JSSC-L":
+        return "created"
+    return "published"
+
+
+def update_settings_for_journal_short(
+    journal_short: str,
+    explicit_lookback_days: int | None,
+    explicit_update_threshold: int | None,
+) -> tuple[int, int]:
+    if journal_short.upper() == "JSSC-L":
+        default_lookback_days = 90
+        default_update_threshold = 9
+    else:
+        default_lookback_days = 30
+        default_update_threshold = 20
+    return (
+        explicit_lookback_days if explicit_lookback_days is not None else default_lookback_days,
+        explicit_update_threshold if explicit_update_threshold is not None else default_update_threshold,
+    )
+
+
+def seed_window_bounds_for_journal_short(
+    journal_short: str,
+    today: date,
+    explicit_from_date: str | None,
+    explicit_to_date: str | None,
+    explicit_lookback_days: int | None,
+) -> tuple[str, str]:
+    if explicit_from_date and explicit_to_date:
+        return explicit_from_date, explicit_to_date
+    if explicit_from_date or explicit_to_date:
+        raise ValueError("--from and --to must be provided together for seed-window")
+    lookback_days, _update_threshold = update_settings_for_journal_short(
+        journal_short,
+        explicit_lookback_days,
+        None,
+    )
+    return (today - timedelta(days=lookback_days)).isoformat(), today.isoformat()
 
 
 if __name__ == "__main__":

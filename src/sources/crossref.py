@@ -24,16 +24,23 @@ def strip_jats(raw_abstract: Optional[str]) -> Optional[str]:
     return text or None
 
 
-def search_crossref_by_issn(issn: str, from_date: str, to_date: str, rows: int = 100) -> list[Paper]:
+def search_crossref_by_issn(
+    issn: str,
+    from_date: str,
+    to_date: str,
+    rows: int = 100,
+    date_field: str = "published",
+) -> list[Paper]:
     papers: list[Paper] = []
     offset = 0
     total_results = None
+    from_filter, until_filter = _date_filter_names(date_field)
     while True:
         params = {
-            "filter": f"issn:{issn},from-pub-date:{from_date},until-pub-date:{to_date},type:journal-article",
+            "filter": f"issn:{issn},{from_filter}:{from_date},{until_filter}:{to_date},type:journal-article",
             "rows": rows,
             "offset": offset,
-            "sort": "published",
+            "sort": date_field,
             "order": "desc",
         }
         payload = get_json(CROSSREF_WORKS_URL, params=params)
@@ -50,6 +57,14 @@ def search_crossref_by_issn(issn: str, from_date: str, to_date: str, rows: int =
         if total_results is not None and offset >= total_results:
             break
     return papers
+
+
+def _date_filter_names(date_field: str) -> tuple[str, str]:
+    if date_field == "published":
+        return "from-pub-date", "until-pub-date"
+    if date_field == "created":
+        return "from-created-date", "until-created-date"
+    raise ValueError(f"Unsupported Crossref date field: {date_field}")
 
 
 def get_by_doi(doi: str) -> Optional[Paper]:
@@ -96,6 +111,8 @@ def _is_non_article_notice(title: str) -> bool:
         "information for authors",
         "guest editorial",
         "editorial",
+        "correction",
+        "corrections to",
         "new associate editor",
         "front cover",
         "back cover",

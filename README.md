@@ -37,8 +37,10 @@ python -m src.main --config config.yaml --no-enrich
 python -m src.main --config config.yaml --mode backfill --backfill-years 5 --no-enrich
 python -m src.main --config config.yaml --mode backfill --backfill-years 5 --no-enrich --enrich-abstracts
 python -m src.main --config config.yaml --mode seed-month --issue-month 2026-05
+python -m src.main --config config.yaml --mode seed-window --journal JSSC-L
 python -m src.main --config config.yaml --mode check-update
 python -m src.main --config config.yaml --mode check-update --journal JSSC --obsidian-dir "/path/to/ASIC/Paper Fetch"
+python -m src.main --config config.yaml --mode check-update --journal JSSC-L
 python -m src.main --config config.yaml --mode enrich-state-abstracts --journal JSSC
 python -m src.main --config config.yaml --journal JSSC
 python -m src.main --config config.yaml --no-springer
@@ -142,6 +144,46 @@ Outputs are written as:
 output/YYMMDD_MODE_FROM_to_TO_papers.csv
 output/YYMMDD_MODE_FROM_to_TO_papers.json
 output/YYMMDD_MODE_FROM_to_TO_paper_metadata.md
+```
+
+## JSSC-L Article-Count Update Workflow
+
+`IEEE Solid-State Circuits Letters` (`JSSC-L`) is configured separately from JSSC because Crossref records for this journal often only expose year-level published dates. The update workflow therefore uses Crossref `created` dates for monthly/update windows.
+
+JSSC-L also has a smaller rolling publication volume than JSSC, so its default `check-update` behavior is article-count based:
+
+```text
+lookback-days: 90
+update-threshold: 9
+```
+
+Because the threshold rule is `new_count > threshold`, this means a JSSC-L draft is written after at least 10 unprocessed articles accumulate.
+
+Seed or reset the JSSC-L baseline:
+
+```bash
+python -m src.main --config config.yaml --mode seed-window --journal JSSC-L
+python -m src.main --config config.yaml --mode enrich-state-abstracts --journal JSSC-L
+```
+
+`seed-window` uses the same journal-specific lookback defaults as `check-update`, so JSSC-L seeds the most recent 90 days unless `--from` and `--to` are provided explicitly.
+
+Run the rolling article-count update:
+
+```bash
+python -m src.main --config config.yaml --mode check-update --journal JSSC-L
+```
+
+When triggered, the draft is written to:
+
+```text
+output/summaries/YYMMDD_JSSC-L_issue_summary_draft.md
+```
+
+The polished Obsidian note should use:
+
+```text
+YYMMDD_JSSC-L_issue_summary.md
 ```
 
 ## Testing

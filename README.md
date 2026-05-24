@@ -294,6 +294,41 @@ Cardiovascular / hemodynamics / vascular monitoring
 
 The filter intentionally excludes general gene therapy, drug delivery, immunotherapy, and general medical AI titles unless the title is clearly tied to sensing, imaging, biointerfaces, neural mapping, cardiovascular monitoring, or organ/tissue-chip systems.
 
+Nature BME is a broader-view radar rather than a high-direct-relevance circuit feed. Treat it as a way to track biomedical system trends, application pull, and clinical translation opportunities that may inform ASIC/sensing work.
+
+Final polished Obsidian summaries should use this format:
+
+```text
+# Nature BME ... Summary - YYMMDD
+
+## 主題分佈
+
+## Wearable / Bioelectronic Sensing
+### Paper title
+- DOI：
+- 日期：
+- 相關標籤：
+- 針對問題：
+- 使用技術/方法：
+- 達到效果：
+
+## Neural / Neuromodulation / Brain Mapping
+...
+
+## Biomedical Imaging / Sensing Hardware
+...
+
+## Organ/Tissue-on-Chip / Microphysiological Systems
+...
+
+## Cardiovascular / Bioelectronic Interface
+...
+
+## 對 ASIC / Sensing 方向的重點
+```
+
+Each paper should appear under one primary category only. Use `相關標籤` for cross-category context instead of duplicating papers across sections.
+
 ## Testing
 
 The tests use the Python standard library runner and do not require live network access or API keys.

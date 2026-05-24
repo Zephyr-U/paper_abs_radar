@@ -31,25 +31,61 @@ If `SPRINGER_API_KEY` is missing, the CLI logs a warning and continues.
 
 ## Usage
 
+Most day-to-day work should use one of these journal-specific commands:
+
 ```bash
-python -m src.main --config config.yaml
-python -m src.main --config config.yaml --no-enrich
-python -m src.main --config config.yaml --mode backfill --backfill-years 5 --no-enrich
-python -m src.main --config config.yaml --mode backfill --backfill-years 5 --no-enrich --enrich-abstracts
-python -m src.main --config config.yaml --mode seed-month --issue-month 2026-05
-python -m src.main --config config.yaml --mode seed-window --journal JSSC-L
-python -m src.main --config config.yaml --mode check-update
-python -m src.main --config config.yaml --mode check-update --journal JSSC --obsidian-dir "/path/to/ASIC/Paper Fetch"
+# JSSC: issue-style update, draft only when new papers > 20
+python -m src.main --config config.yaml --mode check-update --journal JSSC
+
+# Rolling article-count feeds, draft after at least 10 new articles
 python -m src.main --config config.yaml --mode check-update --journal JSSC-L
-python -m src.main --config config.yaml --mode enrich-state-abstracts --journal JSSC
-python -m src.main --config config.yaml --journal JSSC
-python -m src.main --config config.yaml --no-springer
+python -m src.main --config config.yaml --mode check-update --journal TBioCAS
+python -m src.main --config config.yaml --mode check-update --journal "Nature Sensors"
+
+# Filtered broader-view Nature BME feed, draft after at least 10 filtered research articles
+python -m src.main --config config.yaml --mode check-update --journal "Nature BME"
 ```
 
-For the minimal JSSC-only workflow, use `--no-enrich` first. It fetches all OpenAlex pages for the configured JSSC ISSN and skips slower enrichment APIs.
-Add `--enrich-abstracts` when you want to fill missing abstracts through OpenAlex DOI lookup first, then Crossref and Semantic Scholar. The cache defaults to `output/cache/abstracts.json`.
-Use `--mode enrich-state-abstracts` to fill abstracts in an existing monthly/update baseline JSON under `output/state/`.
-`check-update` writes a machine draft named `YYMMDD_JSSC_issue_summary_draft.md`; Codex should use that draft and the state JSON to write the final polished Obsidian note manually.
+For first-time setup or reset, seed the local baseline before running recurring updates:
+
+```bash
+# JSSC is seeded from a known issue month
+python -m src.main --config config.yaml --mode seed-month --journal JSSC --issue-month 2026-05
+
+# Rolling feeds seed from their journal-specific lookback window
+python -m src.main --config config.yaml --mode seed-window --journal JSSC-L
+python -m src.main --config config.yaml --mode seed-window --journal TBioCAS
+python -m src.main --config config.yaml --mode seed-window --journal "Nature Sensors"
+python -m src.main --config config.yaml --mode seed-window --journal "Nature BME"
+```
+
+Use these maintenance commands when needed:
+
+```bash
+# Fill missing abstracts in an existing local baseline
+python -m src.main --config config.yaml --mode enrich-state-abstracts --journal JSSC
+python -m src.main --config config.yaml --mode enrich-state-abstracts --journal JSSC-L
+
+# One-off metadata backfill for recent years
+python -m src.main --config config.yaml --mode backfill --backfill-years 5 --no-enrich
+python -m src.main --config config.yaml --mode backfill --backfill-years 5 --no-enrich --enrich-abstracts
+```
+
+`check-update` writes machine drafts under `output/summaries/`. Codex should read the draft and `output/state/`, then write the final polished Chinese Obsidian note manually.
+
+Backfill exports intentionally contain only:
+
+```text
+title, authors, venue, venue_short, year, publication_date, doi, url, abstract
+```
+
+Backfill outputs are written as:
+
+```text
+output/YYMMDD_MODE_FROM_to_TO_papers.csv
+output/YYMMDD_MODE_FROM_to_TO_papers.json
+output/YYMMDD_MODE_FROM_to_TO_paper_metadata.md
+```
 
 ## JSSC Monthly Update Workflow
 
@@ -131,20 +167,6 @@ Focused summaries should cover:
 - Use Codex to polish focused summaries into Chinese `問題 / 方法 / 效果` format.
 - Save the final note under the Obsidian root folder `Paper Fetch`.
 - Confirm `output/state/JSSC_papers.json` has been updated.
-
-The minimal backfill output intentionally contains only:
-
-```text
-title, authors, venue, venue_short, year, publication_date, doi, url, abstract
-```
-
-Outputs are written as:
-
-```text
-output/YYMMDD_MODE_FROM_to_TO_papers.csv
-output/YYMMDD_MODE_FROM_to_TO_papers.json
-output/YYMMDD_MODE_FROM_to_TO_paper_metadata.md
-```
 
 ## JSSC-L Article-Count Update Workflow
 

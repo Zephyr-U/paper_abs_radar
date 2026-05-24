@@ -4,7 +4,7 @@ from src.config import load_config
 
 
 class ConfigTests(unittest.TestCase):
-    def test_default_config_includes_jssc_jssc_l_tbicas_and_nature_sensors(self):
+    def test_default_config_includes_tracked_journals(self):
         config = load_config("config.yaml")
         journals = {journal.short: journal for journal in config.journals}
 
@@ -18,3 +18,6 @@ class ConfigTests(unittest.TestCase):
         self.assertIn("Nature Sensors", journals)
         self.assertEqual(journals["Nature Sensors"].name, "Nature Sensors")
         self.assertEqual(journals["Nature Sensors"].issn, "3059-4499")
+        self.assertIn("Nature BME", journals)
+        self.assertEqual(journals["Nature BME"].name, "Nature Biomedical Engineering")
+        self.assertEqual(journals["Nature BME"].issn, "2157-846X")

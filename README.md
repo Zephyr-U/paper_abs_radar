@@ -259,6 +259,41 @@ Edge AI / biomedical signal processing
 Wireless / power / closed-loop systems
 ```
 
+## Nature Biomedical Engineering Filtered Update Workflow
+
+`Nature Biomedical Engineering` (`Nature BME`) uses the same rolling article-count rule, but with an additional filter. The workflow reads Nature's public research-articles listing, enriches DOIs through Springer Nature Meta API, keeps research articles only, then stores only filtered papers in the local baseline.
+
+```text
+lookback-days: 90
+update-threshold: 9
+```
+
+This means a draft is written after at least 10 new filtered Nature BME research articles accumulate.
+
+Seed or reset the Nature BME filtered baseline:
+
+```bash
+python -m src.main --config config.yaml --mode seed-window --journal "Nature BME"
+```
+
+Run the rolling filtered update:
+
+```bash
+python -m src.main --config config.yaml --mode check-update --journal "Nature BME"
+```
+
+Nature BME drafts use these focused buckets:
+
+```text
+Wearable / bioelectronic sensing
+Neural / neuromodulation / brain mapping
+Biomedical imaging / sensing hardware
+Organ/tissue-on-chip / microphysiological systems
+Cardiovascular / hemodynamics / vascular monitoring
+```
+
+The filter intentionally excludes general gene therapy, drug delivery, immunotherapy, and general medical AI titles unless the title is clearly tied to sensing, imaging, biointerfaces, neural mapping, cardiovascular monitoring, or organ/tissue-chip systems.
+
 ## Testing
 
 The tests use the Python standard library runner and do not require live network access or API keys.

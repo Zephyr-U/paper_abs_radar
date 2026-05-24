@@ -23,6 +23,9 @@ journals:
     - name: "Nature Sensors"
       short: "Nature Sensors"
       issn: "3059-4499"
+    - name: "Nature Biomedical Engineering"
+      short: "Nature BME"
+      issn: "2157-846X"
 
 keywords:
   positive:

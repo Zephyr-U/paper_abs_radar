@@ -9,6 +9,7 @@ from src.update import (
     apply_update_if_threshold_met,
     diff_new_papers,
     enrich_state_abstracts,
+    filter_papers_for_profile,
     generate_issue_summary_draft,
     load_papers_json,
     save_papers_json,
@@ -163,6 +164,51 @@ class UpdateWorkflowTests(unittest.TestCase):
         self.assertIn("Biomedical AFE / sensor interface: 2", summary)
         self.assertIn("Edge AI / biomedical signal processing: 1", summary)
         self.assertIn("### Implantable / neural interface", summary)
+
+    def test_nature_bme_filter_keeps_only_relevant_research_topics(self):
+        papers = [
+            paper("Wireless and in situ regenerable multimodal wearable bioelectronic sweat sensor"),
+            paper("Fundamental limitations of kilohertz-frequency carriers in transcutaneous spinal cord stimulation"),
+            paper("A three-dimensional multi-modal foundation model for optical coherence tomography"),
+            paper("A cuffless vascular hemodynamics sensor for cardiovascular monitoring"),
+            paper("Polymer-mRNA complexes for protein expression"),
+            paper("CAR-neutrophils for tumour immunotherapy"),
+            paper("Towards generalizable AI for medical diagnosis"),
+            paper("A deep learning system for non-invasive breast cancer diagnosis with multimodal data"),
+            paper("DeepDrugDiscovery identifies blood-brain barrier permeable autophagy enhancers"),
+            paper("High-resolution functional mapping of androgen receptor variants"),
+            paper("Three-dimensional quantitative tissue clearing reveals differences in osteovascular niche"),
+            paper("Single-nucleus transcriptomics of an engineered pig model reveals neurodegeneration"),
+        ]
+
+        filtered = filter_papers_for_profile(papers, "nature_bme")
+
+        self.assertEqual(
+            [item.title for item in filtered],
+            [
+                "Wireless and in situ regenerable multimodal wearable bioelectronic sweat sensor",
+                "Fundamental limitations of kilohertz-frequency carriers in transcutaneous spinal cord stimulation",
+                "A three-dimensional multi-modal foundation model for optical coherence tomography",
+                "A cuffless vascular hemodynamics sensor for cardiovascular monitoring",
+            ],
+        )
+
+    def test_nature_bme_summary_uses_bioengineering_focused_buckets(self):
+        papers = [
+            paper("Wireless and in situ regenerable multimodal wearable bioelectronic sweat sensor"),
+            paper("Geometry-aware noninvasive mapping of whole human brain dynamics"),
+            paper("Whole cross-sectional human ultrasound tomography"),
+            paper("Human inflammatory bowel disease-on-a-chip"),
+            paper("Cardiovascular hemodynamics monitoring with vascular ultrasound"),
+        ]
+
+        summary = generate_issue_summary_draft(papers, profile="nature_bme")
+
+        self.assertIn("Wearable / bioelectronic sensing: 1", summary)
+        self.assertIn("Neural / neuromodulation / brain mapping: 1", summary)
+        self.assertIn("Biomedical imaging / sensing hardware: 2", summary)
+        self.assertIn("Organ/tissue-on-chip / microphysiological systems: 1", summary)
+        self.assertIn("Cardiovascular / hemodynamics / vascular monitoring: 1", summary)
 
     def test_update_below_threshold_does_not_change_baseline(self):
         existing = [paper("Old ADC", "10.1109/old")]

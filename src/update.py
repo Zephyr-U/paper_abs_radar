@@ -121,6 +121,8 @@ def generate_issue_summary_draft(papers: list[Paper], profile: str = "circuits")
         return _generate_nature_sensors_summary_draft(papers)
     if profile == "tbicas":
         return _generate_tbicas_summary_draft(papers)
+    if profile == "nature_bme":
+        return _generate_nature_bme_summary_draft(papers)
     if profile != "circuits":
         raise ValueError(f"Unsupported summary profile: {profile}")
     circuit_buckets = {
@@ -165,6 +167,37 @@ def generate_issue_summary_draft(papers: list[Paper], profile: str = "circuits")
 
 def summarize_distribution(papers: list[Paper]) -> str:
     return generate_issue_summary_draft(papers)
+
+
+def filter_papers_for_profile(papers: list[Paper], profile: str) -> list[Paper]:
+    if profile != "nature_bme":
+        return papers
+    buckets = _nature_bme_buckets()
+    blocked_terms = [
+        "mrna",
+        "gene therapy",
+        "protein expression",
+        "immunotherapy",
+        "car-neutrophil",
+        "car-neutrophils",
+        "drug discovery",
+        "deepdrugdiscovery",
+        "drug delivery",
+        "transcriptomics",
+        "macrophage",
+        "macrophages",
+        "phagocytosis",
+        "chimaeric antigen receptor",
+        "chimeric antigen receptor",
+    ]
+    filtered = []
+    for paper in papers:
+        title = paper.title.lower()
+        if any(term in title for term in blocked_terms):
+            continue
+        if any(_matches_title(paper, keywords) for keywords in buckets.values()):
+            filtered.append(paper)
+    return filtered
 
 
 def _generate_nature_sensors_summary_draft(papers: list[Paper]) -> str:
@@ -341,6 +374,84 @@ def _generate_tbicas_summary_draft(papers: list[Paper]) -> str:
         match_abstract=True,
     )
     return "\n".join(lines).strip() + "\n"
+
+
+def _generate_nature_bme_summary_draft(papers: list[Paper]) -> str:
+    focused_buckets = _nature_bme_buckets()
+    focused_counts, _focused_examples = _bucket_papers_by_title_and_abstract(papers, focused_buckets)
+    lines = [
+        "# Issue Summary Draft",
+        "",
+        f"New articles: {len(papers)}",
+        "",
+        "Counts are title/abstract-keyword based and non-exclusive; abstracts are used for focused summary drafting.",
+        "",
+    ]
+    _append_distribution(lines, "Focused Topic Distribution", focused_counts)
+    _append_focused_summary_candidates(
+        lines,
+        papers,
+        focused_buckets,
+        focused_bucket_names=list(focused_buckets),
+        match_abstract=True,
+    )
+    return "\n".join(lines).strip() + "\n"
+
+
+def _nature_bme_buckets() -> dict[str, list[str]]:
+    return {
+        "Wearable / bioelectronic sensing": [
+            "wearable",
+            "bioelectronic",
+            "sweat",
+            "skin",
+            "epidermal",
+            "sensor",
+            "sensing",
+            "implantable sensor",
+            "biointerface",
+        ],
+        "Neural / neuromodulation / brain mapping": [
+            "neural",
+            "brain",
+            "spinal cord stimulation",
+            "spinal cord injury",
+            "neuromodulation",
+            "fmri",
+            "functional mri",
+            "brain dynamics",
+            "brain mapping",
+            "sensorimotor",
+        ],
+        "Biomedical imaging / sensing hardware": [
+            "imaging",
+            "mri",
+            "oct",
+            "optical coherence tomography",
+            "ultrasound",
+            "tomography",
+            "nanoprobe",
+            "nanoprobes",
+        ],
+        "Organ/tissue-on-chip / microphysiological systems": [
+            "organ-on-chip",
+            "on-a-chip",
+            "tissue-on-chip",
+            "microphysiological",
+            "inflammatory bowel disease-on-a-chip",
+            "tissue remodelling",
+            "tissue remodeling",
+        ],
+        "Cardiovascular / hemodynamics / vascular monitoring": [
+            "cardiovascular",
+            "hemodynamic",
+            "haemodynamic",
+            "blood pressure",
+            "cuffless",
+            "heart",
+            "cardiac",
+        ],
+    }
 
 
 def _bucket_papers(papers: list[Paper], buckets: dict[str, list[str]]) -> tuple[dict[str, int], dict[str, list[str]]]:

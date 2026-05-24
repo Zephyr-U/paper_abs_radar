@@ -1,7 +1,15 @@
 import unittest
 from datetime import date
+from unittest.mock import patch
 
-from src.main import crossref_date_field_for_journal_short, seed_window_bounds_for_journal_short, update_settings_for_journal_short
+from src.models import Journal
+from src.main import (
+    crossref_date_field_for_journal_short,
+    fetch_update_candidates,
+    seed_window_bounds_for_journal_short,
+    summary_profile_for_journal_short,
+    update_settings_for_journal_short,
+)
 
 
 class MainTests(unittest.TestCase):
@@ -19,6 +27,9 @@ class MainTests(unittest.TestCase):
 
     def test_tbicas_uses_article_count_update_defaults(self):
         self.assertEqual(update_settings_for_journal_short("TBioCAS", None, None), (90, 9))
+
+    def test_nature_bme_uses_article_count_update_defaults(self):
+        self.assertEqual(update_settings_for_journal_short("Nature BME", None, None), (90, 9))
 
     def test_jssc_uses_issue_update_defaults(self):
         self.assertEqual(update_settings_for_journal_short("JSSC", None, None), (30, 20))
@@ -43,6 +54,26 @@ class MainTests(unittest.TestCase):
             seed_window_bounds_for_journal_short("TBioCAS", date(2026, 5, 23), None, None, None),
             ("2026-02-22", "2026-05-23"),
         )
+
+    def test_nature_bme_seed_window_defaults_to_article_count_lookback(self):
+        self.assertEqual(
+            seed_window_bounds_for_journal_short("Nature BME", date(2026, 5, 23), None, None, None),
+            ("2026-02-22", "2026-05-23"),
+        )
+
+    def test_nature_bme_uses_filtered_summary_profile(self):
+        self.assertEqual(summary_profile_for_journal_short("Nature BME"), "nature_bme")
+
+    def test_nature_bme_update_candidates_use_nature_research_articles(self):
+        journal = Journal("Nature Biomedical Engineering", "Nature BME", "2157-846X", "nature")
+
+        with patch("src.main.search_nature_research_articles", return_value=["paper"]) as nature_search:
+            with patch("src.main.search_crossref_by_issn") as crossref_search:
+                papers = fetch_update_candidates(journal, "2026-02-22", "2026-05-23")
+
+        self.assertEqual(papers, ["paper"])
+        nature_search.assert_called_once_with("Nature BME", from_date="2026-02-22", to_date="2026-05-23")
+        crossref_search.assert_not_called()
 
     def test_explicit_seed_window_dates_override_defaults(self):
         self.assertEqual(

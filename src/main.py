@@ -14,7 +14,8 @@ from src.env import load_env_file
 from src.export import export_outputs
 from src.sources.crossref import search_crossref_by_issn
 from src.sources.openalex import search_openalex_by_issn
-from src.update import apply_update_if_threshold_met, enrich_state_abstracts, save_papers_json
+from src.sources.springer import search_nature_research_articles
+from src.update import apply_update_if_threshold_met, enrich_state_abstracts, filter_papers_for_profile, save_papers_json
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -63,15 +64,12 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit("--issue-month is required for seed-month, e.g. --issue-month 2026-05")
         for journal in journals:
             from_date, to_date = _month_bounds(args.issue_month)
-            logging.info("Seeding %s state from Crossref %s to %s", journal.short, from_date, to_date)
-            papers = search_crossref_by_issn(
-                journal.issn,
-                from_date,
-                to_date,
-                date_field=crossref_date_field_for_journal_short(journal.short),
-            )
+            logging.info("Seeding %s state from %s to %s", journal.short, from_date, to_date)
+            profile = summary_profile_for_journal_short(journal.short)
+            papers = fetch_update_candidates(journal, from_date, to_date)
+            papers = filter_papers_for_profile(deduplicate_and_merge(papers), profile)
             state_path = Path(args.state_dir) / f"{journal.short}_papers.json"
-            save_papers_json(state_path, deduplicate_and_merge(papers))
+            save_papers_json(state_path, papers)
             logging.info("Wrote %s (%s papers)", state_path, len(papers))
         return 0
 
@@ -85,15 +83,12 @@ def main(argv: list[str] | None = None) -> int:
                 args.to_date,
                 args.lookback_days,
             )
-            logging.info("Seeding %s state from Crossref %s to %s", journal.short, from_date, to_date)
-            papers = search_crossref_by_issn(
-                journal.issn,
-                from_date,
-                to_date,
-                date_field=crossref_date_field_for_journal_short(journal.short),
-            )
+            logging.info("Seeding %s state from %s to %s", journal.short, from_date, to_date)
+            profile = summary_profile_for_journal_short(journal.short)
+            papers = fetch_update_candidates(journal, from_date, to_date)
+            papers = filter_papers_for_profile(deduplicate_and_merge(papers), profile)
             state_path = Path(args.state_dir) / f"{journal.short}_papers.json"
-            save_papers_json(state_path, deduplicate_and_merge(papers))
+            save_papers_json(state_path, papers)
             logging.info("Wrote %s (%s papers)", state_path, len(papers))
         return 0
 
@@ -107,14 +102,11 @@ def main(argv: list[str] | None = None) -> int:
             )
             from_date = (today - timedelta(days=lookback_days)).isoformat()
             to_date = today.isoformat()
-            logging.info("Checking %s Crossref updates from %s to %s", journal.short, from_date, to_date)
-            current = deduplicate_and_merge(
-                search_crossref_by_issn(
-                    journal.issn,
-                    from_date,
-                    to_date,
-                    date_field=crossref_date_field_for_journal_short(journal.short),
-                )
+            logging.info("Checking %s updates from %s to %s", journal.short, from_date, to_date)
+            profile = summary_profile_for_journal_short(journal.short)
+            current = filter_papers_for_profile(
+                deduplicate_and_merge(fetch_update_candidates(journal, from_date, to_date)),
+                profile,
             )
             state_path = Path(args.state_dir) / f"{journal.short}_papers.json"
             summary_path = Path(args.summary_dir) / f"{compact_date_label(to_date)}_{journal.short}_issue_summary_draft.md"
@@ -125,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
                 threshold=update_threshold,
                 cache_path=Path(args.abstract_cache),
                 allow_title_search=args.allow_title_search,
-                summary_profile=summary_profile_for_journal_short(journal.short),
+                summary_profile=profile,
             )
             logging.info("New papers for %s: %s", journal.short, result.new_count)
             if result.summary_written:
@@ -223,7 +215,7 @@ def update_settings_for_journal_short(
     explicit_lookback_days: int | None,
     explicit_update_threshold: int | None,
 ) -> tuple[int, int]:
-    if journal_short.upper() in {"JSSC-L", "TBIOCAS", "NATURE SENSORS"}:
+    if journal_short.upper() in {"JSSC-L", "TBIOCAS", "NATURE SENSORS", "NATURE BME"}:
         default_lookback_days = 90
         default_update_threshold = 9
     else:
@@ -240,7 +232,20 @@ def summary_profile_for_journal_short(journal_short: str) -> str:
         return "nature_sensors"
     if journal_short.upper() == "TBIOCAS":
         return "tbicas"
+    if journal_short.upper() == "NATURE BME":
+        return "nature_bme"
     return "circuits"
+
+
+def fetch_update_candidates(journal, from_date: str, to_date: str):
+    if journal.short.upper() == "NATURE BME":
+        return search_nature_research_articles(journal.short, from_date=from_date, to_date=to_date)
+    return search_crossref_by_issn(
+        journal.issn,
+        from_date,
+        to_date,
+        date_field=crossref_date_field_for_journal_short(journal.short),
+    )
 
 
 def seed_window_bounds_for_journal_short(

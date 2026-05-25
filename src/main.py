@@ -11,6 +11,7 @@ from src.config import load_config
 from src.date_windows import build_run_label, compact_date_label, resolve_date_window
 from src.enrich import deduplicate_and_merge, enrich_papers
 from src.env import load_env_file
+from src.errors import SourceFetchError
 from src.export import export_outputs
 from src.sources.crossref import search_crossref_by_issn
 from src.sources.openalex import search_openalex_by_issn
@@ -62,19 +63,26 @@ def main(argv: list[str] | None = None) -> int:
     if args.mode == "seed-month":
         if not args.issue_month:
             raise SystemExit("--issue-month is required for seed-month, e.g. --issue-month 2026-05")
+        had_fetch_failure = False
         for journal in journals:
             from_date, to_date = _month_bounds(args.issue_month)
             logging.info("Seeding %s state from %s to %s", journal.short, from_date, to_date)
             profile = summary_profile_for_journal_short(journal.short)
-            papers = fetch_update_candidates(journal, from_date, to_date)
+            try:
+                papers = fetch_update_candidates(journal, from_date, to_date)
+            except SourceFetchError as exc:
+                had_fetch_failure = True
+                logging.error("Fetch failed for %s; state unchanged; no draft created; retry needed: %s", journal.short, exc)
+                continue
             papers = filter_papers_for_profile(deduplicate_and_merge(papers), profile)
             state_path = Path(args.state_dir) / f"{journal.short}_papers.json"
             save_papers_json(state_path, papers)
             logging.info("Wrote %s (%s papers)", state_path, len(papers))
-        return 0
+        return 2 if had_fetch_failure else 0
 
     if args.mode == "seed-window":
         today = date.today()
+        had_fetch_failure = False
         for journal in journals:
             from_date, to_date = seed_window_bounds_for_journal_short(
                 journal.short,
@@ -85,15 +93,21 @@ def main(argv: list[str] | None = None) -> int:
             )
             logging.info("Seeding %s state from %s to %s", journal.short, from_date, to_date)
             profile = summary_profile_for_journal_short(journal.short)
-            papers = fetch_update_candidates(journal, from_date, to_date)
+            try:
+                papers = fetch_update_candidates(journal, from_date, to_date)
+            except SourceFetchError as exc:
+                had_fetch_failure = True
+                logging.error("Fetch failed for %s; state unchanged; no draft created; retry needed: %s", journal.short, exc)
+                continue
             papers = filter_papers_for_profile(deduplicate_and_merge(papers), profile)
             state_path = Path(args.state_dir) / f"{journal.short}_papers.json"
             save_papers_json(state_path, papers)
             logging.info("Wrote %s (%s papers)", state_path, len(papers))
-        return 0
+        return 2 if had_fetch_failure else 0
 
     if args.mode == "check-update":
         today = date.today()
+        had_fetch_failure = False
         for journal in journals:
             lookback_days, update_threshold = update_settings_for_journal_short(
                 journal.short,
@@ -104,10 +118,13 @@ def main(argv: list[str] | None = None) -> int:
             to_date = today.isoformat()
             logging.info("Checking %s updates from %s to %s", journal.short, from_date, to_date)
             profile = summary_profile_for_journal_short(journal.short)
-            current = filter_papers_for_profile(
-                deduplicate_and_merge(fetch_update_candidates(journal, from_date, to_date)),
-                profile,
-            )
+            try:
+                candidates = fetch_update_candidates(journal, from_date, to_date)
+            except SourceFetchError as exc:
+                had_fetch_failure = True
+                logging.error("Fetch failed for %s; state unchanged; no draft created; retry needed: %s", journal.short, exc)
+                continue
+            current = filter_papers_for_profile(deduplicate_and_merge(candidates), profile)
             state_path = Path(args.state_dir) / f"{journal.short}_papers.json"
             summary_path = Path(args.summary_dir) / f"{compact_date_label(to_date)}_{journal.short}_issue_summary_draft.md"
             result = apply_update_if_threshold_met(
@@ -133,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
                     logging.info("Obsidian dir configured for Codex-polished summaries: %s", args.obsidian_dir)
             else:
                 logging.info("No state update because new paper count did not exceed %s", update_threshold)
-        return 0
+        return 2 if had_fetch_failure else 0
 
     if args.mode == "enrich-state-abstracts":
         for journal in journals:

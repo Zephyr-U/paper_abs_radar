@@ -73,6 +73,8 @@ python -m src.main --config config.yaml --mode backfill --backfill-years 5 --no-
 
 `check-update` writes machine drafts under `output/summaries/`. Codex should read the draft and `output/state/`, then write the final polished Chinese Obsidian note manually.
 
+If a monitoring source cannot be fetched, the CLI returns exit code `2`, logs `Fetch failed ... state unchanged ... retry needed`, and does not create a draft or update local state. Treat that as inconclusive and retry later; do not report it as "no new papers".
+
 Backfill exports intentionally contain only:
 
 ```text

@@ -1,11 +1,16 @@
 import unittest
 from datetime import date
+import json
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
+from src.errors import SourceFetchError
 from src.models import Journal
 from src.main import (
     crossref_date_field_for_journal_short,
     fetch_update_candidates,
+    main,
     seed_window_bounds_for_journal_short,
     summary_profile_for_journal_short,
     update_settings_for_journal_short,
@@ -80,3 +85,47 @@ class MainTests(unittest.TestCase):
             seed_window_bounds_for_journal_short("JSSC-L", date(2026, 5, 23), "2026-03-01", "2026-04-30", None),
             ("2026-03-01", "2026-04-30"),
         )
+
+    def test_check_update_source_fetch_failure_returns_2_and_preserves_state(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            state_dir = Path(tmpdir) / "state"
+            summary_dir = Path(tmpdir) / "summaries"
+            state_dir.mkdir()
+            state_path = state_dir / "Nature Sensors_papers.json"
+            original_state = [
+                {
+                    "title": "Existing Paper",
+                    "authors": "A. Author",
+                    "venue": "Nature Sensors",
+                    "venue_short": "Nature Sensors",
+                    "year": 2026,
+                    "publication_date": "2026-05-01",
+                    "doi": "10.1038/existing",
+                    "url": "https://doi.org/10.1038/existing",
+                    "abstract": "Existing abstract.",
+                }
+            ]
+            state_path.write_text(json.dumps(original_state), encoding="utf-8")
+
+            with patch("src.main.fetch_update_candidates", side_effect=SourceFetchError("Crossref unavailable")):
+                with self.assertLogs(level="ERROR") as logs:
+                    result = main(
+                        [
+                            "--config",
+                            "config.yaml",
+                            "--mode",
+                            "check-update",
+                            "--journal",
+                            "Nature Sensors",
+                            "--state-dir",
+                            str(state_dir),
+                            "--summary-dir",
+                            str(summary_dir),
+                        ]
+                    )
+
+            self.assertEqual(result, 2)
+            self.assertEqual(json.loads(state_path.read_text(encoding="utf-8")), original_state)
+            self.assertFalse(summary_dir.exists())
+            self.assertIn("Fetch failed for Nature Sensors", "\n".join(logs.output))
+            self.assertIn("state unchanged", "\n".join(logs.output))

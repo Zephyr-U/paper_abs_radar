@@ -6,6 +6,7 @@ import re
 from typing import Any, Optional
 from urllib.parse import urljoin
 
+from src.errors import SourceFetchError
 from src.models import Paper
 from src.utils import clean_text, get_json, get_text
 
@@ -76,6 +77,8 @@ def _collect_nature_research_dois(base_url: str, doi_prefix: str, limit: int) ->
             params["page"] = str(page_number)
         html = get_text(base_url, params=params)
         if not html:
+            if page_number == 1:
+                raise SourceFetchError(f"Nature research article listing fetch failed: {base_url}")
             break
         page_dois = _extract_nature_dois(html, doi_prefix)
         if not page_dois:

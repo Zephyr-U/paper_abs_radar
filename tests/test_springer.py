@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+from src.errors import SourceFetchError
 from src.sources.springer import search_nature_research_articles, springer_enrich_by_doi
 
 
@@ -64,6 +65,11 @@ class SpringerTests(unittest.TestCase):
 
         self.assertEqual([paper.doi for paper in papers], ["10.1038/s41551-026-01670-2", "10.1038/s41551-026-01684-w"])
         self.assertTrue(all(paper.venue_short == "Nature BME" for paper in papers))
+
+    def test_search_nature_research_articles_raises_when_listing_fetch_fails(self):
+        with patch("src.sources.springer.get_text", return_value=None):
+            with self.assertRaises(SourceFetchError):
+                search_nature_research_articles("Nature BME", from_date="2026-04-01", to_date="2026-05-31")
 
 
 def _paper(title, doi, publication_date):

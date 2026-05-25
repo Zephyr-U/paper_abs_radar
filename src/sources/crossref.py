@@ -4,6 +4,7 @@ import re
 from html import unescape
 from typing import Any, Optional
 
+from src.errors import SourceFetchError
 from src.models import Paper
 from src.utils import clean_text, first, get_json
 
@@ -44,6 +45,8 @@ def search_crossref_by_issn(
             "order": "desc",
         }
         payload = get_json(CROSSREF_WORKS_URL, params=params)
+        if payload is None:
+            raise SourceFetchError(f"Crossref fetch failed for ISSN {issn} ({from_date} to {to_date})")
         message = (payload or {}).get("message") or {}
         items = message.get("items") or []
         total_results = message.get("total-results") if total_results is None else total_results

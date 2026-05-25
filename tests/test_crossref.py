@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+from src.errors import SourceFetchError
 from src.sources.crossref import search_crossref_by_issn
 
 
@@ -70,3 +71,14 @@ class CrossrefSearchTests(unittest.TestCase):
         self.assertIn("from-created-date:2026-05-01", mocked.call_args.kwargs["params"]["filter"])
         self.assertIn("until-created-date:2026-05-31", mocked.call_args.kwargs["params"]["filter"])
         self.assertEqual(mocked.call_args.kwargs["params"]["sort"], "created")
+
+    def test_search_crossref_raises_when_api_fetch_fails(self):
+        with patch("src.sources.crossref.get_json", return_value=None):
+            with self.assertRaises(SourceFetchError):
+                search_crossref_by_issn("0018-9200", "2026-05-01", "2026-05-31")
+
+    def test_search_crossref_returns_empty_list_for_successful_empty_response(self):
+        with patch("src.sources.crossref.get_json", return_value={"message": {"total-results": 0, "items": []}}):
+            papers = search_crossref_by_issn("0018-9200", "2026-05-01", "2026-05-31")
+
+        self.assertEqual(papers, [])
